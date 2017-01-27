@@ -117,12 +117,12 @@ public class US {
         return behavior.reduceright(objs);
     }
 
-    public LC filter(FilterInterfaceAbstract behavior){ // This implies that the field value is an SObject.
+    public US filter(FilterInterfaceAbstract behavior){ // This implies that the field value is an SObject.
         objs = behavior.filter(objs);
         return this;
     }
 
-    public LC(List<SObject> items){
+    public US(List<SObject> items){
         objs = items;
         original_objs = items;
         mutated = false;
