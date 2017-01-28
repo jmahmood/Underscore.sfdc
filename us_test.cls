@@ -23,7 +23,7 @@ public class US_Test {
         }
     }
     
-    public Class FilterTest extends US.FilterInterfaceAbstract{
+    public Class GmailOnly extends US.FilterInterfaceAbstract{
         public override void filterfn(List<SObject> memo, SObject value){
             if (((String) value.get('email')).contains('gmail'))
                 memo.add(value);
@@ -61,7 +61,7 @@ public class US_Test {
     static testmethod void filter_interface_test(){
         List<User> users = [select id, firstname, name, email from User limit 10];
         US x = new US(users);
-        x.filter(new FilterTest());
+        x.filter('GmailOnly');
         for(Sobject u: x.objs){
 	        system.Assert(((String) u.get('email')).contains('gmail'));
         }

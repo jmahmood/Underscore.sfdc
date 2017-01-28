@@ -29,8 +29,8 @@ public class US {
         SObject reducefn(SObject Memo, SObject value, Integer index, List<SObject> lst);
     }
 
-    /*	These abstract classes allow us to implement the logical function only */
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
+        /*  These abstract classes allow us to implement the logical function only */
         public SObject reduceright(List<SObject> objs){
             if (objs.size() == 0){
                 return null;
@@ -50,7 +50,7 @@ public class US {
     }
     
     public abstract class ReduceInterfaceAbstract implements ReduceInterface{
-        public SObject reduce(List<SObject> objs){ /*	This probably has to be copied into an abstract class so we only implmeent the fn itself.*/
+        public SObject reduce(List<SObject> objs){
             if (objs.size() == 0){
                 return null;
             }
@@ -68,18 +68,54 @@ public class US {
         }
     }
     
+    /*
+    TODO: Consider renaming FilterInterface to TruthyInterface, as we are using it for all true tests.
+
+    */
     public abstract class FilterInterfaceAbstract implements FilterInterface{
         public List<SObject> filter(List<SObject> lst){
             List<SObject> memo = new List<SObject>();
             for (SObject value : lst){
-                filterfn(memo, value);
+                if(filterfn(memo, value)){
+                    memo.add(value);
+                }
             }
             return memo;
         }
         
-        public abstract void filterfn(List<SObject> memo, SObject value);
+        public List<SObject> reject(List<SObject> lst){
+            List<SObject> memo = new List<SObject>();
+            for (SObject value : lst){
+                if(!filterfn(memo, value)){
+                    memo.add(value);
+                }
+            }
+            return memo;
+        }
+        
+        public Boolean every(List<SObject> lst){
+            for (SObject value : lst){
+                if(!filterfn(memo, value)){
+                    return false
+                }
+            }
+            return true;
+        }
+
+        public Boolean some(List<SObject> lst){
+            for (SObject value : lst){
+                if(filterfn(memo, value)){
+                    return true
+                }
+            }
+            return false;
+        }
+
+        public abstract boolean filterfn(List<SObject> memo, SObject value);
     }
+
     
+        
     public interface ReduceRightInterface { // Please see US_Test to see how to use this.
         // This is challenging as we may want to return a string or an integer, 
         // but with an SObject we could hopefully have both or all of these in the end.
@@ -117,8 +153,118 @@ public class US {
         return behavior.reduceright(objs);
     }
 
-    public US filter(FilterInterfaceAbstract behavior){ // This implies that the field value is an SObject.
+    public SObject find(FilterInterface behavior){
         objs = behavior.filter(objs);
+        return objs.size() > 0 ? objs[0] : null;
+    }
+
+    /*  
+    WHY:  Remove the loop / matching boilerplate from the main function expression.
+    WHY:  Create reusable filters which can be applied to all SObjects
+    WHY:  Create side-effects which push best practices 
+    HOW:  Create a class which extends FilterInterfaceAbstract and has a name which implies its function.
+    EXAMPLE: 
+    US x = new US([select id, email from User]);
+    x.filter('MyClass.GmailEmailsOnly').filter('MyClass.CreatedToday');
+
+
+    class CreatedToday extends FilterInterfaceAbstract{
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return (Date) value.get('CreatedDate') == System.today();
+        }
+    }
+
+    class GmailEmailsOnly extends FilterInterfaceAbstract{
+        public override void filterfn(List<SObject> memo, SObject value){
+            return ((String) value.get('email')).contains('gmail');
+        }
+    }
+
+    TODO: A sane default interface 
+        x.filter('id', something).filter('field__c', something)...*/
+    public US filter(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        FilterInterface behavior = (FilterInterface)t.newInstance();
+
+        objs = behavior.filter(objs);
+        return this;
+    }
+
+    /*
+        Because mixing types isn't easy in a Map, initializing (but not saving) an SObject and passing along the vlaues (or passing along an SObject that already exists and the related value)
+        works for this.
+    */
+
+    public US where(SObject properties, List<String> property_fields){
+        List<SObject> ret = new List<SObject>();
+        for (SObject o: objs){
+            boolean allowed = true;
+
+            for (field f: property_fields)
+                allowed = allowed && properties.get(f) == o.get(f);
+
+            if (allowed)
+                ret.add(o);
+        }
+        return this;
+    }
+
+    public US findwhere(SObject properties, List<String> property_fields){
+        for (SObject o: objs){
+            boolean allowed = true;
+
+            for (field f: property_fields)
+                allowed = allowed && properties.get(f) == o.get(f);
+
+            if (allowed)
+                return o;
+        }
+        return null;
+    }
+
+    /*  
+    EXAMPLE: 
+    US x = new US([select id, email from User]);
+    x.filter('MyClass.GmailEmailsOnly').reject('MyClass.CreatedToday');
+    (Get all Users w/ Gmail emails which were not in User objects that were created today)
+
+
+    class CreatedToday extends FilterInterfaceAbstract{
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return (Date) value.get('CreatedDate') == System.today();
+        }
+    }
+
+    class GmailEmailsOnly extends FilterInterfaceAbstract{
+        public override void filterfn(List<SObject> memo, SObject value){
+            return ((String) value.get('email')).contains('gmail');
+        }
+    }
+
+    TODO: A sane default interface 
+        x.filter('id', something).filter('field__c', something)...*/
+    public US reject(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        FilterInterface behavior = (FilterInterface)t.newInstance();
+
+        objs = behavior.reject(objs);
+        return this;
+    }
+
+    public US every(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        FilterInterface behavior = (FilterInterface)t.newInstance();
+
+        objs = behavior.reject(objs);
+        return this;
+    }
+
+
+    public US some(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        FilterInterface behavior = (FilterInterface)t.newInstance();
+
+        objs = behavior.some(objs);
         return this;
     }
 
