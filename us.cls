@@ -268,6 +268,94 @@ public class US {
         return this;
     }
 
+    public Boolean contains(SObject x){
+        /*  Why no class?  Contains seems, to me, to be testing for the presence of an object, and has a very 
+        clear meaning in SFDC.  If you want to look for a specific condition existing, you would use "some".
+
+        Thoughts: This is dependent on the Set Contains function, which has certain limitations.  
+        Matching by ID may be more sensible for SObjects.
+        */
+        return (new Set<SObject>(objs)).contains(x);
+    }
+
+    public void invoke(String fqdn_behavior_cls){
+        // We cannot dynamically invoke a function or a method in Salesforce.
+        // you should use collect / map to mutate the function 
+        throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
+    }
+
+
+    public List<Object> pluck(String field){
+        List<Object> ret = new List<Object> ();
+        for(Sobject o: objs){
+            ret.add(o.get(field));
+        }
+        return ret;
+    }
+
+
+    public Object max(String field){
+        /*
+            I can imagine many different ways to implement this, but what should the default use case be?
+        */
+
+        throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
+    }
+
+    public US sortBy(){
+        /*  SFDC standard sorting methodology. */
+        objs.sort();
+        return this;
+    }
+
+    public US sortBy(String fqdn_behavior_cls){
+        /*
+            To sort SObjects, we have this option: 
+            https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_list_sorting_sobject.htm
+
+            In this case, the behavior class must implement Comparable and must have the instance of the SObject stored
+            in the field "obj".  
+
+            TODO: Can we make an abstract class for this which enforces the existence of obj?
+        */
+
+        Type t = Type.forName(fqdn_behavior_cls);
+        List<Comparable> sorted_objs_wrapper = new list<Comparable>();
+        for(SObject o: objs){
+            sorted_objs_wrapper.add(
+                (Comparable)t.newInstance(o);
+            )
+        }
+
+        sorted_objs_wrapper.sort();
+
+        List<SObject> updated_list = new List<SObject>();
+        for(Comparable c: sorted_objs_wrapper){
+            updated_list.add(c.get('obj'));
+        }
+
+        objs = updated_list;
+        return this;
+    }
+
+    public Map<String, Set<SObject>> groupBy(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        GroupByInterface behavior = (GroupByInterface)t.newInstance();
+        Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
+
+        for(Sobject o: objs){
+            String group_name = behavior.groupByFn(o);
+            if (ret.get(group_name) == null)
+                ret.put(group_name, new Set<SObject>());
+            ret.get(group_name).add(o);
+        }
+
+        return ret;
+    }
+
+
+
+
     public US(List<SObject> items){
         objs = items;
         original_objs = items;
