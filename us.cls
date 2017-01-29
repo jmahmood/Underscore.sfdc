@@ -29,6 +29,14 @@ public class US {
         SObject reducefn(SObject Memo, SObject value, Integer index, List<SObject> lst);
     }
 
+    public interface GroupByInterface {
+        String groupByFn(SObject obj);
+    }
+
+    public interface IndexByInterface {
+        String indexByFn(SObject obj);
+    }
+
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
         /*  These abstract classes allow us to implement the logical function only */
         public SObject reduceright(List<SObject> objs){
@@ -348,6 +356,20 @@ public class US {
             if (ret.get(group_name) == null)
                 ret.put(group_name, new Set<SObject>());
             ret.get(group_name).add(o);
+        }
+
+        return ret;
+    }
+
+
+    public Map<String, SObject> indexBy(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        IndexByInterface behavior = (IndexByInterface)t.newInstance();
+        Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
+
+        for(Sobject o: objs){
+            String group_name = behavior.indexByFn(o);
+            ret.put(group_name, o);
         }
 
         return ret;
