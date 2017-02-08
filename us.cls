@@ -1,8 +1,40 @@
 public class US { 
-    /*	Inspired by Underscore.js.  
+    /*	God bless Am.. I mean Underscore.js
      * The purposes is to allow you to concentrate on logic vs. loops and other code clutter that 
      * clouds (har har) the actual work you are doing.
      */
+
+    @testvisible List<SObject> objs;
+    Final List<SObject> original_objs;
+    Boolean mutated;
+    Integer i;
+    
+    /*  *********************************  */
+    /*  Generic Filters                    */
+    /*  *********************************  */
+
+    public class FilterFieldIds extends US.FilterInterfaceAbstract {
+        Id filter_val;
+        String filter_field;
+        public FilterFieldIds(String field, Id val){
+            filter_field = field;
+            filter_val = val;
+        }
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return (Id) value.get(filter_field) == filter_val;
+        }
+    } 
+
+
+    /*  *********************************  */
+    /*  Exceptions                         */
+    /*  *********************************  */
+
+    class UnimplementedUnderscoreException extends Exception{};
+
+    /*  *********************************  */
+    /*  Interfaces                         */
+    /*  *********************************  */
 
     public interface FilterInterface { // Please see US_Test to see how to use this.
         // Cannot use "Map" due to it being a reserved term in Apex.
@@ -36,6 +68,18 @@ public class US {
     public interface IndexByInterface {
         String indexByFn(SObject obj);
     }
+
+    public interface ReduceRightInterface { // Please see US_Test to see how to use this.
+        // This is challenging as we may want to return a string or an integer, 
+        // but with an SObject we could hopefully have both or all of these in the end.
+        // There is no need for Memo and Value to be the same kind of SObject.
+        SObject reduceright(List<SObject> objs); 
+        SObject reducerightfn(SObject Memo, SObject value, Integer index, List<SObject> lst);
+    }
+
+    /*  *********************************  */
+    /*  Abstract Classes                   */
+    /*  *********************************  */
 
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
         /*  These abstract classes allow us to implement the logical function only */
@@ -81,6 +125,8 @@ public class US {
 
     */
     public abstract class FilterInterfaceAbstract implements FilterInterface{
+        public abstract boolean filterfn(List<SObject> memo, SObject value);
+        
         public List<SObject> filter(List<SObject> lst){
             List<SObject> memo = new List<SObject>();
             for (SObject value : lst){
@@ -119,44 +165,32 @@ public class US {
             return false;
         }
 
-        public abstract boolean filterfn(List<SObject> memo, SObject value);
     }
 
-    
-        
-    public interface ReduceRightInterface { // Please see US_Test to see how to use this.
-        // This is challenging as we may want to return a string or an integer, 
-        // but with an SObject we could hopefully have both or all of these in the end.
-        // There is no need for Memo and Value to be the same kind of SObject.
-        SObject reduceright(List<SObject> objs); 
-        SObject reducerightfn(SObject Memo, SObject value, Integer index, List<SObject> lst);
-    }
+    /*  *********************************  */
+    /*  Functions                          */
+    /*  *********************************  */
 
-    @testvisible List<SObject> objs;
-    Final List<SObject> original_objs;
-    Boolean mutated;
-    Integer i;
-    
     public List<SObject> collect(CollectInterface behavior){
-        // This mutates the object; you cannot rewind after this is done.
+        // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
         return behavior.collect(objs);
     }
 
     public List<SObject> each(EachInterface behavior){
-        // This mutates the object; you cannot rewind after this is done.
+        // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
         return behavior.each(objs);
     }
 
     public SObject reduce(ReduceInterface behavior){
-        // This mutates the object; you cannot rewind after this is done.
+        // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
         return behavior.reduce(objs);
     }
 
     public SObject reduceright(ReduceRightInterface behavior){
-        // This mutates the object; you cannot rewind after this is done.
+        // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
         return behavior.reduceright(objs);
     }
@@ -189,14 +223,25 @@ public class US {
     }
 
     TODO: A sane default interface 
-        x.filter('id', something).filter('field__c', something)...*/
+        x.filter('id', something).filter('field__c', something)...
+
+
+    */
+
+    /*  What is the benefit of dynamically creating the object when we can't pass variables?  
     public US filter(String fqdn_behavior_cls){
         Type t = Type.forName(fqdn_behavior_cls);
         FilterInterface behavior = (FilterInterface)t.newInstance();
 
         objs = behavior.filter(objs);
         return this;
+    }*/
+
+    public US filter(FilterInterface behavior){
+        objs = behavior.filter(objs);
+        return this;
     }
+    
 
     /*
         Because mixing types isn't easy in a Map, initializing (but not saving) an SObject and passing along the vlaues (or passing along an SObject that already exists and the related value)
@@ -365,7 +410,7 @@ public class US {
     public Map<String, SObject> indexBy(String fqdn_behavior_cls){
         Type t = Type.forName(fqdn_behavior_cls);
         IndexByInterface behavior = (IndexByInterface)t.newInstance();
-        Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
+        Map<String, SObject> ret = new Map<String, SObject>();
 
         for(Sobject o: objs){
             String group_name = behavior.indexByFn(o);
@@ -376,7 +421,44 @@ public class US {
     }
 
 
+    public Map<String, Integer> countBy(String fqdn_behavior_cls){
+        Type t = Type.forName(fqdn_behavior_cls);
+        CountByInterface behavior = (CountByInterface)t.newInstance();
+        Map<String, Integer> ret = new Map<String, Integer>();
 
+        for(Sobject o: objs){
+            String group_name = behavior.countByFn(o);
+            if (ret.get(group_name) == null)
+                ret.put(group_name, 0);
+            ret.put(group_name, ret.get(group_name) + 1);
+        }
+
+        return ret;
+    }
+
+    public void shuffle(){
+        throw new UnimplementedUnderscoreException('Shuffle is not implemented (What\'s the point?');
+    }
+
+    public void sample(Integer n){
+        throw new UnimplementedUnderscoreException('Sample is not implemented.');
+    }
+
+    public US rewind(){
+        if (mutated)
+            system.debug('The original list has been set, but it has been mutated.');
+        objs = original_objs;
+        return this;
+    }
+
+
+    public List<SObject> toList(){
+        return objs;
+    }
+    
+    public Integer size(){
+        return obj.size();
+    }
 
     public US(List<SObject> items){
         objs = items;
