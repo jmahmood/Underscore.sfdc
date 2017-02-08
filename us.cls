@@ -1,5 +1,5 @@
-public class US { 
-    /*	God bless Am.. I mean Underscore.js
+public class US {
+    /*  God bless Am.. I mean Underscore.js
      * The purposes is to allow you to concentrate on logic vs. loops and other code clutter that 
      * clouds (har har) the actual work you are doing.
      */
@@ -25,13 +25,12 @@ public class US {
         }
     } 
 
-
     /*  *********************************  */
     /*  Exceptions                         */
     /*  *********************************  */
 
-    class UnimplementedUnderscoreException extends Exception{};
-
+    public virtual class UnimplementedUnderscoreException extends Exception{}
+    
     /*  *********************************  */
     /*  Interfaces                         */
     /*  *********************************  */
@@ -40,7 +39,7 @@ public class US {
         // Cannot use "Map" due to it being a reserved term in Apex.
         // Is there a way to prevent anything passed into this from being "changed" (ie this should only filter?)
         List<SObject> filter(List<SObject> lst);
-        Void filterfn(List<SObject> memo, SObject value);
+        boolean filterfn(List<SObject> memo, SObject value);
     }
 
     public interface CollectInterface { // Please see US_Test to see how to use this.
@@ -68,6 +67,11 @@ public class US {
     public interface IndexByInterface {
         String indexByFn(SObject obj);
     }
+
+    public interface CountByInterface {
+        String countByFn(SObject obj);
+    }
+
 
     public interface ReduceRightInterface { // Please see US_Test to see how to use this.
         // This is challenging as we may want to return a string or an integer, 
@@ -100,7 +104,7 @@ public class US {
             return Memo;
         }
     }
-    
+
     public abstract class ReduceInterfaceAbstract implements ReduceInterface{
         public SObject reduce(List<SObject> objs){
             if (objs.size() == 0){
@@ -119,10 +123,8 @@ public class US {
             return Memo;
         }
     }
-    
     /*
     TODO: Consider renaming FilterInterface to TruthyInterface, as we are using it for all true tests.
-
     */
     public abstract class FilterInterfaceAbstract implements FilterInterface{
         public abstract boolean filterfn(List<SObject> memo, SObject value);
@@ -148,23 +150,24 @@ public class US {
         }
         
         public Boolean every(List<SObject> lst){
+            List<SObject> memo = new List<SObject>();
             for (SObject value : lst){
                 if(!filterfn(memo, value)){
-                    return false
+                    return false;
                 }
             }
             return true;
         }
 
         public Boolean some(List<SObject> lst){
+            List<SObject> memo = new List<SObject>();
             for (SObject value : lst){
                 if(filterfn(memo, value)){
-                    return true
+                    return true;
                 }
             }
             return false;
         }
-
     }
 
     /*  *********************************  */
@@ -199,6 +202,7 @@ public class US {
         objs = behavior.filter(objs);
         return objs.size() > 0 ? objs[0] : null;
     }
+
 
     /*  
     WHY:  Remove the loop / matching boilerplate from the main function expression.
@@ -237,90 +241,24 @@ public class US {
         return this;
     }*/
 
-    public US filter(FilterInterface behavior){
+    public US filter(FilterInterfaceAbstract behavior){
         objs = behavior.filter(objs);
         return this;
     }
+
+    public US reject(FilterInterfaceAbstract behavior){
+        objs = behavior.reject(objs);
+        return this;
+    }
+
+    public Boolean every(FilterInterfaceAbstract behavior){
+        return behavior.every(objs);
+    }
+
+    public Boolean some(FilterInterfaceAbstract behavior){
+        return behavior.some(objs);
+    }
     
-
-    /*
-        Because mixing types isn't easy in a Map, initializing (but not saving) an SObject and passing along the vlaues (or passing along an SObject that already exists and the related value)
-        works for this.
-    */
-
-    public US where(SObject properties, List<String> property_fields){
-        List<SObject> ret = new List<SObject>();
-        for (SObject o: objs){
-            boolean allowed = true;
-
-            for (field f: property_fields)
-                allowed = allowed && properties.get(f) == o.get(f);
-
-            if (allowed)
-                ret.add(o);
-        }
-        return this;
-    }
-
-    public US findwhere(SObject properties, List<String> property_fields){
-        for (SObject o: objs){
-            boolean allowed = true;
-
-            for (field f: property_fields)
-                allowed = allowed && properties.get(f) == o.get(f);
-
-            if (allowed)
-                return o;
-        }
-        return null;
-    }
-
-    /*  
-    EXAMPLE: 
-    US x = new US([select id, email from User]);
-    x.filter('MyClass.GmailEmailsOnly').reject('MyClass.CreatedToday');
-    (Get all Users w/ Gmail emails which were not in User objects that were created today)
-
-
-    class CreatedToday extends FilterInterfaceAbstract{
-        public override boolean filterfn(List<SObject> memo, SObject value){
-            return (Date) value.get('CreatedDate') == System.today();
-        }
-    }
-
-    class GmailEmailsOnly extends FilterInterfaceAbstract{
-        public override void filterfn(List<SObject> memo, SObject value){
-            return ((String) value.get('email')).contains('gmail');
-        }
-    }
-
-    TODO: A sane default interface 
-        x.filter('id', something).filter('field__c', something)...*/
-    public US reject(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        FilterInterface behavior = (FilterInterface)t.newInstance();
-
-        objs = behavior.reject(objs);
-        return this;
-    }
-
-    public US every(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        FilterInterface behavior = (FilterInterface)t.newInstance();
-
-        objs = behavior.reject(objs);
-        return this;
-    }
-
-
-    public US some(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        FilterInterface behavior = (FilterInterface)t.newInstance();
-
-        objs = behavior.some(objs);
-        return this;
-    }
-
     public Boolean contains(SObject x){
         /*  Why no class?  Contains seems, to me, to be testing for the presence of an object, and has a very 
         clear meaning in SFDC.  If you want to look for a specific condition existing, you would use "some".
@@ -330,13 +268,12 @@ public class US {
         */
         return (new Set<SObject>(objs)).contains(x);
     }
-
+    
     public void invoke(String fqdn_behavior_cls){
         // We cannot dynamically invoke a function or a method in Salesforce.
         // you should use collect / map to mutate the function 
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
-
 
     public List<Object> pluck(String field){
         List<Object> ret = new List<Object> ();
@@ -346,7 +283,6 @@ public class US {
         return ret;
     }
 
-
     public Object max(String field){
         /*
             I can imagine many different ways to implement this, but what should the default use case be?
@@ -354,46 +290,14 @@ public class US {
 
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
-
+    
     public US sortBy(){
         /*  SFDC standard sorting methodology. */
         objs.sort();
         return this;
     }
 
-    public US sortBy(String fqdn_behavior_cls){
-        /*
-            To sort SObjects, we have this option: 
-            https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_list_sorting_sobject.htm
-
-            In this case, the behavior class must implement Comparable and must have the instance of the SObject stored
-            in the field "obj".  
-
-            TODO: Can we make an abstract class for this which enforces the existence of obj?
-        */
-
-        Type t = Type.forName(fqdn_behavior_cls);
-        List<Comparable> sorted_objs_wrapper = new list<Comparable>();
-        for(SObject o: objs){
-            sorted_objs_wrapper.add(
-                (Comparable)t.newInstance(o);
-            )
-        }
-
-        sorted_objs_wrapper.sort();
-
-        List<SObject> updated_list = new List<SObject>();
-        for(Comparable c: sorted_objs_wrapper){
-            updated_list.add(c.get('obj'));
-        }
-
-        objs = updated_list;
-        return this;
-    }
-
-    public Map<String, Set<SObject>> groupBy(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        GroupByInterface behavior = (GroupByInterface)t.newInstance();
+    public Map<String, Set<SObject>> groupBy(GroupByInterface behavior){
         Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
 
         for(Sobject o: objs){
@@ -407,9 +311,7 @@ public class US {
     }
 
 
-    public Map<String, SObject> indexBy(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        IndexByInterface behavior = (IndexByInterface)t.newInstance();
+    public Map<String, SObject> indexBy(IndexByInterface behavior){
         Map<String, SObject> ret = new Map<String, SObject>();
 
         for(Sobject o: objs){
@@ -421,9 +323,7 @@ public class US {
     }
 
 
-    public Map<String, Integer> countBy(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        CountByInterface behavior = (CountByInterface)t.newInstance();
+    public Map<String, Integer> countBy(CountByInterface behavior){
         Map<String, Integer> ret = new Map<String, Integer>();
 
         for(Sobject o: objs){
@@ -444,20 +344,47 @@ public class US {
         throw new UnimplementedUnderscoreException('Sample is not implemented.');
     }
 
-    public US rewind(){
-        if (mutated)
-            system.debug('The original list has been set, but it has been mutated.');
-        objs = original_objs;
+    /*
+        Because mixing types isn't easy in a Map, initializing (but not saving) an SObject and passing along the vlaues (or passing along an SObject that already exists and the related value)
+        works for this.
+    */
+    
+    // Where is a reserved word in Apex so we are using the name whreHas instead.
+    public US whereHas(SObject properties, List<String> property_fields){
+        List<SObject> ret = new List<SObject>();
+        for (SObject o: objs){
+            boolean allowed = true;
+
+            for (String f: property_fields)
+                allowed = allowed && properties.get(f) == o.get(f);
+
+            if (allowed)
+                ret.add(o);
+        }
+        objs = ret;
         return this;
     }
 
+    public SObject findwhere(SObject properties, List<String> property_fields){
+        for (SObject o: objs){
+            boolean allowed = true;
+
+            for (String f: property_fields)
+                allowed = allowed && properties.get(f) == o.get(f);
+
+            if (allowed)
+                return o;
+        }
+        return null;
+    }
 
     public List<SObject> toList(){
         return objs;
     }
-    
-    public Integer size(){
-        return obj.size();
+
+    public US rewind(){
+        objs = original_objs;
+        return this;
     }
 
     public US(List<SObject> items){
@@ -466,5 +393,4 @@ public class US {
         mutated = false;
         i = 0;
     }
-    
 }
