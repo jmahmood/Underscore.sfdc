@@ -24,8 +24,20 @@ public class US {
                 return Memo;
             return value;
         }		
-	}
+    }
 
+    public class FilterFieldStrings extends US.FilterInterfaceAbstract {
+        String filter_val;
+        String filter_field;
+        public FilterFieldStrings(String field, String val){
+            filter_field = field;
+            filter_val = val;
+        }
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return (String) value.get(filter_field) == filter_val;
+        }
+    } 
+	
     public class FilterFieldIds extends US.FilterInterfaceAbstract {
         Id filter_val;
         String filter_field;
