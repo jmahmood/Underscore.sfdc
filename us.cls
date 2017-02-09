@@ -12,6 +12,19 @@ public class US {
     /*  *********************************  */
     /*  Generic Filters                    */
     /*  *********************************  */
+	public class KeepNewest extends ReduceInterfaceAbstract{
+		public String DateField;
+
+		public KeepNewest(String date_field){
+			DateField = date_field;
+		}
+
+        public override SObject reducefn(SObject Memo, SObject value, Integer index, List<SObject> lst){
+        	if (((Date) Memo.get(DateField)) >= ((Date) value.get(DateField)))
+                return Memo;
+            return value;
+        }		
+	}
 
     public class FilterFieldIds extends US.FilterInterfaceAbstract {
         Id filter_val;
