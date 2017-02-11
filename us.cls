@@ -146,7 +146,7 @@ public class US {
        * in Apex.
        */
         List<SObject> collect(List<SObject> lst);
-        void collectfn(List<SObject> memo, SObject iteratee, Integer index);
+        void collectfn(List<SObject> lst, SObject value, Integer index);
     }
 
     public interface EachInterface { 
@@ -173,7 +173,7 @@ public class US {
        * @see EachInterfaceAbstract
        */
         List<SObject> each(List<SObject> objs);
-        void eachfn(List<SObject> memo, SObject iteratee, Integer index);
+        void eachfn(List<SObject> lst, SObject value, Integer index);
     }
 
     public interface ReduceInterface { 
@@ -366,7 +366,7 @@ public class US {
 
     public abstract Class CollectInterfaceAbstract implements CollectInterface{
  
-        public abstract void collectfn(List<SObject> memo, SObject iteratee, Integer index);
+        public abstract void collectfn(List<SObject> lst, SObject value, Integer index);
 
         public List<SObject> collect(List<SObject> objs){
             Integer i = 0;
@@ -379,7 +379,7 @@ public class US {
     }
 
     public abstract Class EachInterfaceAbstract implements EachInterface{
-        public abstract void eachfn(List<SObject> memo, SObject iteratee, Integer index);
+        public abstract void eachfn(List<SObject> lst, SObject value, Integer index);
 
         public List<SObject> each(List<SObject> objs){
             Integer i = 0;
@@ -443,6 +443,12 @@ public class US {
     /*  *********************************  */
 
     public US collect(CollectInterface behavior){
+      /**
+      * Produces a new array of values by mapping each value in list 
+      * through a transformation function (behavior.collectfn). The collectfn is 
+      * passed three arguments: the value, then the index (or key) of 
+      * the iteration, and finally a reference to the entire list.
+      */
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
         objs = behavior.collect(objs);
