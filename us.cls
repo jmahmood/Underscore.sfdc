@@ -122,19 +122,10 @@ public class US {
     public interface CollectInterface { 
        /**
        * @Beta
-       * This interface allows us to transform all elements in a list with a function.
+       * This interface allows us to create a new list based on all of the items in a list of SObjects.
        *
-       * WARNING: Collect (map) overlaps functionally with Each.  Practically, we pass each item 
-       * in a list to a function which then can either modify the data or execute some other function
-       * with the data.
-       * 
-       * I currently do not believe that there is any meaningful difference that can be implemented
-       * in Salesforce without something hacky.
-       *
-       * In the future I may change this behavior, depending on user feedback.
-       *
-       * Use "Collect" if you just want to mutate data on an object, use "Each" if you want to
-       * call an external function or use the object to modify some sort of external state.
+       * Use "Collect" if you just want to create a new list that stores the result of a function on a 
+       * US Obj list, use "Each" if you want to modify the actual object itself.
        * 
        * You can override US.CollectInterfaceAbstract to get the most likely configuration 
        * you want for collect.
@@ -145,8 +136,8 @@ public class US {
        * refers to the Associative Array / JavaScript Object / Python Dict type of collection
        * in Apex.
        */
-        List<SObject> collect(List<SObject> lst);
-        void collectfn(List<SObject> lst, SObject value, Integer index);
+        List<Object> collect(List<SObject> lst);
+        Object collectfn(List<SObject> lst, SObject value, Integer index);
     }
 
     public interface EachInterface { 
@@ -366,12 +357,13 @@ public class US {
 
     public abstract Class CollectInterfaceAbstract implements CollectInterface{
  
-        public abstract void collectfn(List<SObject> lst, SObject value, Integer index);
+        public abstract Object collectfn(List<SObject> lst, SObject value, Integer index);
 
-        public List<SObject> collect(List<SObject> objs){
+        public List<Object> collect(List<SObject> objs){
             Integer i = 0;
+	    List<Object> ret = new List<Object>();
             for(SObject o: objs){
-                collectfn(objs, o, i);
+                ret.add(collectfn(objs, o, i));
                 i += 1;
             }
             return objs;
@@ -442,7 +434,7 @@ public class US {
     /*  Functions                          */
     /*  *********************************  */
 
-    public US collect(CollectInterface behavior){
+    public List<Object> collect(CollectInterface behavior){
       /**
       * Produces a new array of values by mapping each value in list 
       * through a transformation function (behavior.collectfn). The collectfn is 
@@ -450,9 +442,7 @@ public class US {
       * the iteration, and finally a reference to the entire list.
       */
         // This mutates the object.  Rewinding only restores the original list, not the original values.
-        mutated = true;
-        objs = behavior.collect(objs);
-        return this;
+        return behavior.collect(objs);
     }
 
     public US each(EachInterface behavior){
