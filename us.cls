@@ -366,7 +366,7 @@ public class US {
                 ret.add(collectfn(objs, o, i));
                 i += 1;
             }
-            return objs;
+            return ret;
         }
     }
 
