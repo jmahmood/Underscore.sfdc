@@ -12,7 +12,7 @@ public class US {
     /*  *********************************  */
     /*  Generic Filters                    */
     /*  *********************************  */
-	public class KeepNewest extends ReduceInterfaceAbstract{
+    public class KeepNewest extends ReduceInterfaceAbstract{
        /**
        * This class implements a common list manipulation use case;
        * to reduce a list of SObjects to the newest element based on a specific date field.
@@ -24,17 +24,17 @@ public class US {
        * @param DateField A string that represents the name of the date field in the SObject.
        */
 
-		final private String DateField;
+    	final private String DateField;
 
-		public KeepNewest(String date_field){
-			DateField = date_field;
-		}
+        public KeepNewest(String date_field){
+            DateField = date_field;
+        }
 
-        public override SObject reducefn(List<SObject> lst, SObject iteratee, SObject memo, Integer index){
-        	if (((Date) iteratee.get(DateField)) >= ((Date) iteratee.get(DateField)))
-                return iteratee;
-            return value;
-            }		
+        public override SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index){
+            if (((Date) value.get(DateField)) >= ((Date) memo.get(DateField)))
+                return value;
+            return memo;
+        }
     }
 
     public class FilterFieldStrings extends US.FilterInterfaceAbstract {
@@ -182,7 +182,7 @@ public class US {
         * @see KeepNewest
         */
         SObject reduce(List<SObject> objs); 
-        SObject reducefn(List<SObject> lst, SObject iteratee, SObject memo, Integer index);
+        SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index);
     }
 
     public interface ReduceRightInterface {
@@ -312,7 +312,7 @@ public class US {
             return ret;
         }
 
-        public abstract SObject partitionFn(SObject obj); // generates partition name
+        public abstract String partitionFn(SObject obj); // generates partition name
     }
 
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
@@ -347,12 +347,12 @@ public class US {
             }
             SObject memo = objs[0];
             for(Integer i = 1; i < objs.size(); i++){
-                memo = reduceFn(memo, objs[i], i-1, objs);
+                memo = reduceFn(objs, objs[i], memo, i-1);
             }
             return memo;
         } 
 
-        public abstract SObject reducefn(SObject memo, SObject value, Integer index, List<SObject> lst);
+        public abstract SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index);
     }
 
     public abstract Class CollectInterfaceAbstract implements CollectInterface{
@@ -566,33 +566,17 @@ public class US {
     }
 
     public Map<String, Set<SObject>> groupBy(GroupByInterface behavior){
-        return behavior.group(objs);
+        return behavior.groupBy(objs);
     }
 
 
     public Map<String, SObject> indexBy(IndexByInterface behavior){
-        Map<String, SObject> ret = new Map<String, SObject>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.indexByFn(o);
-            ret.put(group_name, o);
-        }
-
-        return ret;
+        return behavior.indexBy(objs);
     }
 
 
     public Map<String, Integer> countBy(CountByInterface behavior){
-        Map<String, Integer> ret = new Map<String, Integer>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.countByFn(o);
-            if (ret.get(group_name) == null)
-                ret.put(group_name, 0);
-            ret.put(group_name, ret.get(group_name) + 1);
-        }
-
-        return ret;
+        return behavior.countBy(objs);
     }
 
     public void shuffle(){
