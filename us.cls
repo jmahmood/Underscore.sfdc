@@ -12,14 +12,85 @@ public class US {
     /*  *********************************  */
     /*  Generic Filters                    */
     /*  *********************************  */
+    public class KeepNewest extends ReduceInterfaceAbstract{
+         /**
+         * This class implements a common list manipulation use case;
+         * to reduce a list of SObjects to the newest element based on a specific date field.
+         * 
+         * Example:
+         *    x = new US([select id, name, CreatedDate from User limit 10]);
+         *    User newest_created_user = (User) x.reduce(new US.KeepNewest('CreatedDate'));
+         *
+         * @param DateField A string that represents the name of the date field in the SObject.
+         */
 
+      final private String DateField;
+
+      public KeepNewest(String date_field){
+        DateField = date_field;
+      }
+
+      public override SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index){
+        if (((Date) value.get(DateField)) >= ((Date) memo.get(DateField)))
+          return value;
+        return memo;
+      } 
+    
+    } // KeepNewest
+
+    public class FilterFieldStrings extends US.FilterInterfaceAbstract {
+       /**
+       * This class implements a common list manipulation use case;
+       * to confirm whether or not a string field on an SObject is of the same value as the value passed initially.
+       * This can be used with multiple functions, not just filters.
+       * 
+       * Example:
+       *    x = new US([select id, name, CreatedDate from User limit 10]);
+       *    List<User> UsersNamedJawaad = x.filter(new US.FilterFieldStrings('Name', 'Jawaad')).toList();
+       *    List<User> UsersNotNamedJawaad = x.rewind().reject(new US.FilterFieldStrings('Name', 'Jawaad')).toList();
+       *    Boolean AreAllUsersJawaad = x.rewind().every(new US.FilterFieldStrings('Name', 'Jawaad'));
+       *    Boolean AreSomeUsersJawaad = x.rewind().some(new US.FilterFieldStrings('Name', 'Jawaad'));
+       * @param field A string that represents the name of the Id field in the SObject.
+       * @param val A constant String value that we want to filter for.
+       */
+
+        final private String filter_val;
+        final private String filter_field;
+
+        public FilterFieldStrings(String field, String val){
+            filter_field = field;
+            filter_val = val;
+        }
+
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return (String) value.get(filter_field) == filter_val;
+        }
+    } 
+  
     public class FilterFieldIds extends US.FilterInterfaceAbstract {
-        Id filter_val;
-        String filter_field;
+       /**
+       * This class implements a common list manipulation use case;
+       * to confirm whether or not an ID field on an SObject is of the same value as a value passed to the system.
+       * This can be used with multiple functions, not just filters.
+       * 
+       * Example:
+       *    x = new US([select id, name, CreatedDate from User limit 10]);
+       *    List<User> UsersWithId = x.filter(new US.FilterFieldStrings('Id', 'xxxxxxxxxxxxxx')).toList();
+       *    List<User> UsersWithoutId = x.rewind().reject(new US.FilterFieldStrings('Id', 'xxxxxxxxxxxxxx')).toList();
+       *    Boolean AreAllUsersWithIdX = x.rewind().every(new US.FilterFieldStrings('Id', 'xxxxxxxxxxxxxx'));
+       *    Boolean AreSomeWithIdX = x.rewind().some(new US.FilterFieldStrings('Id', 'xxxxxxxxxxxxxx'));
+       * @param field A string that represents the name of the Id field in the SObject.
+       * @param value A constant ID value that we want to filter for.
+       */
+
+        final private Id filter_val;
+        final private String filter_field;
+
         public FilterFieldIds(String field, Id val){
             filter_field = field;
             filter_val = val;
         }
+
         public override boolean filterfn(List<SObject> memo, SObject value){
             return (Id) value.get(filter_field) == filter_val;
         }
@@ -35,58 +106,219 @@ public class US {
     /*  Interfaces                         */
     /*  *********************************  */
 
-    public interface FilterInterface { // Please see US_Test to see how to use this.
-        // Cannot use "Map" due to it being a reserved term in Apex.
-        // Is there a way to prevent anything passed into this from being "changed" (ie this should only filter?)
+    public interface FilterInterface {
+       /**
+       * This interface allows us to create dynamic conditions to determine whether or not
+       * an SObject meets a boolean condition.
+       * 
+       * You can override US.FilterInterfaceAbstract to get the most likely configuration 
+       * you want for filter.
+       *
+       * @see FilterInterfaceAbstract
+       */
         List<SObject> filter(List<SObject> lst);
         boolean filterfn(List<SObject> memo, SObject value);
     }
 
-    public interface CollectInterface { // Please see US_Test to see how to use this.
-        // Cannot use "Map" due to it being a reserved term in Apex.
-        List<SObject> collect(List<SObject> lst);
+    public interface CollectInterface { 
+       /**
+       * @Beta
+       * This interface allows us to create a new list based on all of the items in a list of SObjects.
+       *
+       * Use "Collect" if you just want to create a new list that stores the result of a function on a 
+       * US Obj list, use "Each" if you want to modify the actual object itself.
+       * 
+       * You can override US.CollectInterfaceAbstract to get the most likely configuration 
+       * you want for collect.
+       *
+       * @see CollectInterfaceAbstract
+       *
+       * We use the term "collect" instead of "Map" because "Map" is a keyword that
+       * refers to the Associative Array / JavaScript Object / Python Dict type of collection
+       * in Apex.
+       */
+        List<Object> collect(List<SObject> lst);
+        Object collectfn(List<SObject> lst, SObject value, Integer index);
     }
 
-    public interface EachInterface { // Please see US_Test to see how to use this.
+    public interface EachInterface { 
+       /**
+       * @Beta
+       * This interface allows us to pass all elements in the list to a function.
+       *
+       * WARNING: Collect (map) overlaps functionally with Each.  Practically, we pass each item 
+       * in a list to a function which then can either modify the data or execute some other function
+       * with the data.
+       * 
+       * I currently do not believe that there is any meaningful difference that can be implemented
+       * in Salesforce without something hacky.
+       *
+       * In the future I may change this behavior, depending on user feedback.
+       *
+       * Use "Each" if you want to call an external function on the object  or use the object to modify 
+       * some sort of external state.  Use "Collect" if you just want to mutate data on an object.
+       * 
+       * You can override US.EachInterfaceAbstract to get the most likely configuration 
+       * you want for collect.
+       *
+       * @see CollectInterface
+       * @see EachInterfaceAbstract
+       */
         List<SObject> each(List<SObject> objs);
-        SObject eachfn(SObject Element, Integer index, List<SObject> lst);
+        void eachfn(List<SObject> lst, SObject value, Integer index);
     }
 
-    public interface ReduceInterface { // Please see US_Test to see how to use this.
-        // This is challenging as we may want to return a string or an integer, 
-        // but with an SObject we could hopefully have both or all of these in the end.
-        // There is no need for Memo and Value to be the same kind of SObject.
+    public interface ReduceInterface { 
+        /**
+        * This interface allows us to execute a reduce, which permits you to
+        * convert a set of values into a single sobject value.
+        *
+        * You can override US.ReduceInterfaceAbstract to get the most likely configuration 
+        * you want for collect.
+        *
+        * Note: Memo does not have to be the same kind of object as iteratee or lst.
+        * For example, it could be a parent value generated from a list of child objects).
+        *
+        * @see ReduceInterfaceAbstract
+        * @see KeepNewest
+        */
         SObject reduce(List<SObject> objs); 
-        SObject reducefn(SObject Memo, SObject value, Integer index, List<SObject> lst);
+        SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index);
+    }
+
+    public interface ReduceRightInterface {
+        /**
+        * This interface allows us to execute a "right reduce", which permits you to
+        * convert a set of values into a single sobject value.  
+        *
+        * This differs from a "reduce" as the values are taken from the right side, not
+        * the left.  This is not entirely meaningful in Apex, but is here for the
+        * sake of completeness.
+        *
+        * You can override US.ReduceInterfaceAbstract to get the most likely configuration 
+        * you want for collect.
+        *
+        * Note: Memo does not have to be the same kind of object as iteratee or lst.
+        * For example, it could be a parent value generated from a list of child objects).
+        *
+        * @see ReduceInterface
+        * @see ReduceRightInterfaceAbstract
+        */
+        SObject reduceright(List<SObject> objs); 
+        SObject reducerightfn(List<SObject> lst, SObject value, SObject memo, Integer index);
+    }
+
+    public interface PartitionInterface {
+        String partitionFn(SObject obj);
     }
 
     public interface GroupByInterface {
-        String groupByFn(SObject obj);
+        /**
+        * Classes implementing this will group a list of SObjects on the basis of a 
+        * partition function.
+        *
+        * You can override US.PartitionInterfaceAbstract to get the most likely configuration 
+        * you want for GroupBy.  (You also get IndexBy and CountBy for free)
+        *
+        * @see IndexByInterface
+        * @see CountByInterface
+        * @see PartitionInterface
+        * @see PartitionInterfaceAbstract
+        */
+        Map<String, Set<SObject>> groupBy(List<SObject> objs);
     }
 
     public interface IndexByInterface {
-        String indexByFn(SObject obj);
+        /**
+        * Classes implementing this will generate a map on the basis of a 
+        * partition function.  This should only be used when you are using a unique
+        * key to partition (think ID) or want to keep only the last item which matches
+        * the partition value.
+        *
+        * You can override US.PartitionInterfaceAbstract to get the most likely configuration 
+        * you want for IndexBy.  (You also get GroupBy and CountBy for free)
+        *
+        * @see GroupByInterface
+        * @see CountByInterface
+        * @see PartitionInterface
+        * @see PartitionInterfaceAbstract
+        */
+        Map<String, SObject> indexBy(List<SObject> objs);
     }
 
     public interface CountByInterface {
-        String countByFn(SObject obj);
+        /**
+        * Classes implementing this will generate a map on the basis of a 
+        * partition function, with the number of times that partition is repeated.
+        *
+        * You can override US.PartitionInterfaceAbstract to get the most likely configuration 
+        * you want for CountBy.  (You also get GroupBy and IndexBy for free)
+        *
+        * @see GroupByInterface
+        * @see IndexByInterface
+        * @see PartitionInterface
+        * @see PartitionInterfaceAbstract
+        */
+        Map<String, Integer> countBy(List<SObject> objs);
     }
 
-
-    public interface ReduceRightInterface { // Please see US_Test to see how to use this.
-        // This is challenging as we may want to return a string or an integer, 
-        // but with an SObject we could hopefully have both or all of these in the end.
-        // There is no need for Memo and Value to be the same kind of SObject.
-        SObject reduceright(List<SObject> objs); 
-        SObject reducerightfn(SObject Memo, SObject value, Integer index, List<SObject> lst);
-    }
 
     /*  *********************************  */
     /*  Abstract Classes                   */
     /*  *********************************  */
 
+    public abstract class PartitionInterfaceAbstract implements GroupByInterface, IndexByInterface, CountByInterface, PartitionInterface{
+        /**
+        * This class handles the majority of the Partition-related functions.  
+        * You only need to override the partitionFn object.
+        *
+        * @param objs A list of SObjects on which you want to use the partition function.
+        * @see GroupByInterface
+        * @see IndexByInterface
+        * @see CountByInterface
+        * @see PartitionInterface
+        */
+
+        public Map<String, Set<SObject>> groupBy(List<SObject> objs){
+            Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
+
+            for(Sobject o: objs){
+                String group_name = partitionFn(o);
+                if (ret.get(group_name) == null)
+                    ret.put(group_name, new Set<SObject>());
+                ret.get(group_name).add(o);
+            }
+            return ret;
+        }
+
+        public Map<String, SObject> indexBy(List<SObject> objs){
+            Map<String, SObject> ret = new Map<String, SObject>();
+
+            for(Sobject o: objs){
+                String group_name = partitionFn(o);
+                ret.put(group_name, o);
+            }
+            return ret;
+        }
+
+
+        public Map<String, Integer> countBy(List<SObject> objs){
+            Map<String, Integer> ret = new Map<String, Integer>();
+
+            for(Sobject o: objs){
+                String group_name = partitionFn(o);
+                Integer val = ret.get(group_name) == null ? 1 : ret.get(group_name) + 1;
+                ret.put(group_name, val);
+            }
+            return ret;
+        }
+
+        public abstract String partitionFn(SObject obj); // generates partition name
+    }
+
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
-        /*  These abstract classes allow us to implement the logical function only */
+        // TODO: Should we merge this with ReduceInterfaceAbstract?  Seems to make more sense that way.
+
         public SObject reduceright(List<SObject> objs){
             if (objs.size() == 0){
                 return null;
@@ -94,18 +326,18 @@ public class US {
             if (objs.size() == 1){
                 return objs[0];
             }
-            SObject memo = objs[objs.size()-1];
+            SObject memo = objs[objs.size()-1]; // initial object.
             for(Integer i = objs.size()-1; i >= 0; i--){
-                memo = reducerightfn(memo, objs[i], objs.size()-1-i, objs);
+                memo = reducerightfn(objs, objs[i], memo, objs.size()-1-i);
             }
             return memo;
         }
-        SObject reducerightfn(SObject Memo, SObject value, Integer index, List<SObject> lst){
-            return Memo;
-        }
+        public abstract SObject reducerightfn(List<SObject> lst, SObject iteratee, SObject memo, Integer index);
     }
 
     public abstract class ReduceInterfaceAbstract implements ReduceInterface{
+        // TODO: Should we merge this with ReduceRightInterfaceAbstract?  Seems to make more sense that way.
+
         public SObject reduce(List<SObject> objs){
             if (objs.size() == 0){
                 return null;
@@ -115,18 +347,46 @@ public class US {
             }
             SObject memo = objs[0];
             for(Integer i = 1; i < objs.size(); i++){
-                memo = reduceFn(memo, objs[i], i-1, objs);
+                memo = reduceFn(objs, objs[i], memo, i-1);
             }
             return memo;
         } 
-        SObject reducefn(SObject Memo, SObject value, Integer index, List<SObject> lst){
-            return Memo;
+
+        public abstract SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index);
+    }
+
+    public abstract Class CollectInterfaceAbstract implements CollectInterface{
+ 
+        public abstract Object collectfn(List<SObject> lst, SObject value, Integer index);
+
+        public List<Object> collect(List<SObject> objs){
+            Integer i = 0;
+            List<Object> ret = new List<Object>();
+            for(SObject o: objs){
+                ret.add(collectfn(objs, o, i));
+                i += 1;
+            }
+            return ret;
         }
     }
-    /*
-    TODO: Consider renaming FilterInterface to TruthyInterface, as we are using it for all true tests.
-    */
+
+    public abstract Class EachInterfaceAbstract implements EachInterface{
+        public abstract void eachfn(List<SObject> lst, SObject value, Integer index);
+
+        public List<SObject> each(List<SObject> objs){
+            Integer i = 0;
+            for(SObject o: objs){
+                eachfn(objs, o, i);
+                i += 1;
+            }
+            return objs;
+        }
+    }
+
+
     public abstract class FilterInterfaceAbstract implements FilterInterface{
+        // TODO: Should we rename this as it implements items other than filter?
+
         public abstract boolean filterfn(List<SObject> memo, SObject value);
         
         public List<SObject> filter(List<SObject> lst){
@@ -174,16 +434,23 @@ public class US {
     /*  Functions                          */
     /*  *********************************  */
 
-    public List<SObject> collect(CollectInterface behavior){
+
+    public List<Object> collect(CollectInterface behavior){
+      /**
+      * Produces a new array of values by mapping each value in list 
+      * through a transformation function (behavior.collectfn). The collectfn is 
+      * passed three arguments: the value, then the index (or key) of 
+      * the iteration, and finally a reference to the entire list.
+      */
         // This mutates the object.  Rewinding only restores the original list, not the original values.
-        mutated = true;
         return behavior.collect(objs);
     }
 
-    public List<SObject> each(EachInterface behavior){
+    public US each(EachInterface behavior){
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
-        return behavior.each(objs);
+        objs = behavior.each(objs);
+        return this;
     }
 
     public SObject reduce(ReduceInterface behavior){
@@ -199,47 +466,39 @@ public class US {
     }
 
     public SObject find(FilterInterface behavior){
+        // Returns the first item we find which matches the value we are looking for.
         objs = behavior.filter(objs);
         return objs.size() > 0 ? objs[0] : null;
     }
 
 
-    /*  
-    WHY:  Remove the loop / matching boilerplate from the main function expression.
-    WHY:  Create reusable filters which can be applied to all SObjects
-    WHY:  Create side-effects which push best practices 
-    HOW:  Create a class which extends FilterInterfaceAbstract and has a name which implies its function.
-    EXAMPLE: 
-    US x = new US([select id, email from User]);
-    x.filter('MyClass.GmailEmailsOnly').filter('MyClass.CreatedToday');
-
-
-    class CreatedToday extends FilterInterfaceAbstract{
-        public override boolean filterfn(List<SObject> memo, SObject value){
-            return (Date) value.get('CreatedDate') == System.today();
-        }
-    }
-
-    class GmailEmailsOnly extends FilterInterfaceAbstract{
-        public override void filterfn(List<SObject> memo, SObject value){
-            return ((String) value.get('email')).contains('gmail');
-        }
-    }
-
-    TODO: A sane default interface 
-        x.filter('id', something).filter('field__c', something)...
-
-
+    /** 
+    * WHY:  Remove the loop / matching boilerplate from the main function expression.
+    * WHY:  Create reusable filters which can be applied to all SObjects
+    * WHY:  Create side-effects which push best practices 
+    * HOW:  Create a class which extends FilterInterfaceAbstract and has a name which implies its function.
+    * EXAMPLE: 
+    *       US x = new US([select id, email from User]);
+    *       x.filter('MyClass.GmailEmailsOnly').filter('MyClass.CreatedToday');
+    *
+    *
+    *       class CreatedToday extends FilterInterfaceAbstract{
+    *           public override boolean filterfn(List<SObject> memo, SObject value){
+    *               return (Date) value.get('CreatedDate') == System.today();
+    *           }
+    *       }
+    *       
+    *       class GmailEmailsOnly extends FilterInterfaceAbstract{
+    *           public override void filterfn(List<SObject> memo, SObject value){
+    *               return ((String) value.get('email')).contains('gmail');
+    *           }
+    *       }
+    *
+    * TODO: A sane default interface 
+    *    x.filter('id', something).filter('field__c', something)...
+    *
+    *
     */
-
-    /*  What is the benefit of dynamically creating the object when we can't pass variables?  
-    public US filter(String fqdn_behavior_cls){
-        Type t = Type.forName(fqdn_behavior_cls);
-        FilterInterface behavior = (FilterInterface)t.newInstance();
-
-        objs = behavior.filter(objs);
-        return this;
-    }*/
 
     public US filter(FilterInterfaceAbstract behavior){
         objs = behavior.filter(objs);
@@ -260,7 +519,7 @@ public class US {
     }
     
     public Boolean contains(SObject x){
-        /*  Why no class?  Contains seems, to me, to be testing for the presence of an object, and has a very 
+        /*  Why no class behavior?  Contains seems, to me, to be testing for the presence of an object, and has a very 
         clear meaning in SFDC.  If you want to look for a specific condition existing, you would use "some".
 
         Thoughts: This is dependent on the Set Contains function, which has certain limitations.  
@@ -271,7 +530,7 @@ public class US {
     
     public void invoke(String fqdn_behavior_cls){
         // We cannot dynamically invoke a function or a method in Salesforce.
-        // you should use collect / map to mutate the function 
+        // you should use collect / map to mutate the collection 
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
 
@@ -283,14 +542,28 @@ public class US {
         return ret;
     }
 
+    public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
+      return (List<Id>) US.stringify(pluck(field));
+    }
+
     public Object max(String field){
         /*
-            I can imagine many different ways to implement this, but what should the default use case be?
+            Is there a way to handle Max w/ the default Object instead of 
+            casting & passing a function?  Does it work with something else? 
         */
 
-        throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
+        throw new UnimplementedUnderscoreException('Not yet implemented.');
     }
-    
+
+    public Object min(String field){
+        /*
+            Is there a way to handle min w/ the default Object instead of 
+            casting & passing a function?  Does it work with something else? 
+        */
+
+        throw new UnimplementedUnderscoreException('Not yet implemented.');
+    }
+        
     public US sortBy(){
         /*  SFDC standard sorting methodology. */
         objs.sort();
@@ -298,42 +571,17 @@ public class US {
     }
 
     public Map<String, Set<SObject>> groupBy(GroupByInterface behavior){
-        Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.groupByFn(o);
-            if (ret.get(group_name) == null)
-                ret.put(group_name, new Set<SObject>());
-            ret.get(group_name).add(o);
-        }
-
-        return ret;
+        return behavior.groupBy(objs);
     }
 
 
     public Map<String, SObject> indexBy(IndexByInterface behavior){
-        Map<String, SObject> ret = new Map<String, SObject>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.indexByFn(o);
-            ret.put(group_name, o);
-        }
-
-        return ret;
+        return behavior.indexBy(objs);
     }
 
 
     public Map<String, Integer> countBy(CountByInterface behavior){
-        Map<String, Integer> ret = new Map<String, Integer>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.countByFn(o);
-            if (ret.get(group_name) == null)
-                ret.put(group_name, 0);
-            ret.put(group_name, ret.get(group_name) + 1);
-        }
-
-        return ret;
+        return behavior.countBy(objs);
     }
 
     public void shuffle(){
@@ -382,6 +630,12 @@ public class US {
         return objs;
     }
 
+    public SObject first(){
+      if (objs.size() > 0)
+        return objs[0];
+      return null;
+    }
+
     public US rewind(){
         objs = original_objs;
         return this;
@@ -393,4 +647,16 @@ public class US {
         mutated = false;
         i = 0;
     }
+
+    /*  Static functions to deal with returned data; we may want to modify how we handle this in teh future.*/
+    
+    public static List<String> stringify(List<Object> objs){
+        /* How to integrate this? */
+        List<String> ret = new List<String>();
+        for (Object o: objs){
+            ret.add((String) o);
+        }
+        return ret;
+    }
+
 }
