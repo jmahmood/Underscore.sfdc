@@ -12,30 +12,31 @@ public class US {
     /*  *********************************  */
     /*  Generic Filters                    */
     /*  *********************************  */
-	public class KeepNewest extends ReduceInterfaceAbstract{
-       /**
-       * This class implements a common list manipulation use case;
-       * to reduce a list of SObjects to the newest element based on a specific date field.
-       * 
-       * Example:
-       *    x = new US([select id, name, CreatedDate from User limit 10]);
-       *    User newest_created_user = (User) x.reduce(new US.KeepNewest('CreatedDate'));
-       *
-       * @param DateField A string that represents the name of the date field in the SObject.
-       */
+    public class KeepNewest extends ReduceInterfaceAbstract{
+         /**
+         * This class implements a common list manipulation use case;
+         * to reduce a list of SObjects to the newest element based on a specific date field.
+         * 
+         * Example:
+         *    x = new US([select id, name, CreatedDate from User limit 10]);
+         *    User newest_created_user = (User) x.reduce(new US.KeepNewest('CreatedDate'));
+         *
+         * @param DateField A string that represents the name of the date field in the SObject.
+         */
 
-		final private String DateField;
+      final private String DateField;
 
-		public KeepNewest(String date_field){
-			DateField = date_field;
-		}
+      public KeepNewest(String date_field){
+        DateField = date_field;
+      }
 
-        public override SObject reducefn(List<SObject> lst, SObject iteratee, SObject memo, Integer index){
-        	if (((Date) iteratee.get(DateField)) >= ((Date) iteratee.get(DateField)))
-                return iteratee;
-            return value;
-            }		
-    }
+      public override SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index){
+        if (((Date) value.get(DateField)) >= ((Date) memo.get(DateField)))
+          return value;
+        return memo;
+      } 
+    
+    } // KeepNewest
 
     public class FilterFieldStrings extends US.FilterInterfaceAbstract {
        /**
@@ -65,7 +66,7 @@ public class US {
             return (String) value.get(filter_field) == filter_val;
         }
     } 
-	
+  
     public class FilterFieldIds extends US.FilterInterfaceAbstract {
        /**
        * This class implements a common list manipulation use case;
@@ -122,19 +123,10 @@ public class US {
     public interface CollectInterface { 
        /**
        * @Beta
-       * This interface allows us to transform all elements in a list with a function.
+       * This interface allows us to create a new list based on all of the items in a list of SObjects.
        *
-       * WARNING: Collect (map) overlaps functionally with Each.  Practically, we pass each item 
-       * in a list to a function which then can either modify the data or execute some other function
-       * with the data.
-       * 
-       * I currently do not believe that there is any meaningful difference that can be implemented
-       * in Salesforce without something hacky.
-       *
-       * In the future I may change this behavior, depending on user feedback.
-       *
-       * Use "Collect" if you just want to mutate data on an object, use "Each" if you want to
-       * call an external function or use the object to modify some sort of external state.
+       * Use "Collect" if you just want to create a new list that stores the result of a function on a 
+       * US Obj list, use "Each" if you want to modify the actual object itself.
        * 
        * You can override US.CollectInterfaceAbstract to get the most likely configuration 
        * you want for collect.
@@ -145,8 +137,8 @@ public class US {
        * refers to the Associative Array / JavaScript Object / Python Dict type of collection
        * in Apex.
        */
-        List<SObject> collect(List<SObject> lst);
-        void collectfn(List<SObject> lst, SObject value, Integer index);
+        List<Object> collect(List<SObject> lst);
+        Object collectfn(List<SObject> lst, SObject value, Integer index);
     }
 
     public interface EachInterface { 
@@ -191,7 +183,7 @@ public class US {
         * @see KeepNewest
         */
         SObject reduce(List<SObject> objs); 
-        SObject reducefn(List<SObject> lst, SObject iteratee, SObject memo, Integer index);
+        SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index);
     }
 
     public interface ReduceRightInterface {
@@ -213,7 +205,7 @@ public class US {
         * @see ReduceRightInterfaceAbstract
         */
         SObject reduceright(List<SObject> objs); 
-        SObject reducerightfn(List<SObject> lst, SObject iteratee, SObject memo, Integer index);
+        SObject reducerightfn(List<SObject> lst, SObject value, SObject memo, Integer index);
     }
 
     public interface PartitionInterface {
@@ -321,7 +313,7 @@ public class US {
             return ret;
         }
 
-        public abstract SObject partitionFn(SObject obj); // generates partition name
+        public abstract String partitionFn(SObject obj); // generates partition name
     }
 
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
@@ -334,14 +326,13 @@ public class US {
             if (objs.size() == 1){
                 return objs[0];
             }
-            SObject memo = objs[objs.size()-1];
+            SObject memo = objs[objs.size()-1]; // initial object.
             for(Integer i = objs.size()-1; i >= 0; i--){
-                memo = reducerightfn(memo, objs[i], objs.size()-1-i, objs);
+                memo = reducerightfn(objs, objs[i], memo, objs.size()-1-i);
             }
             return memo;
         }
-
-        public abstract SObject reducerightfn(SObject memo, SObject value, Integer index, List<SObject> lst);
+        public abstract SObject reducerightfn(List<SObject> lst, SObject iteratee, SObject memo, Integer index);
     }
 
     public abstract class ReduceInterfaceAbstract implements ReduceInterface{
@@ -356,25 +347,26 @@ public class US {
             }
             SObject memo = objs[0];
             for(Integer i = 1; i < objs.size(); i++){
-                memo = reduceFn(memo, objs[i], i-1, objs);
+                memo = reduceFn(objs, objs[i], memo, i-1);
             }
             return memo;
         } 
 
-        public abstract SObject reducefn(SObject memo, SObject value, Integer index, List<SObject> lst);
+        public abstract SObject reducefn(List<SObject> lst, SObject value, SObject memo, Integer index);
     }
 
     public abstract Class CollectInterfaceAbstract implements CollectInterface{
  
-        public abstract void collectfn(List<SObject> lst, SObject value, Integer index);
+        public abstract Object collectfn(List<SObject> lst, SObject value, Integer index);
 
-        public List<SObject> collect(List<SObject> objs){
+        public List<Object> collect(List<SObject> objs){
             Integer i = 0;
+            List<Object> ret = new List<Object>();
             for(SObject o: objs){
-                collectfn(objs, o, i);
+                ret.add(collectfn(objs, o, i));
                 i += 1;
             }
-            return objs;
+            return ret;
         }
     }
 
@@ -442,7 +434,7 @@ public class US {
     /*  Functions                          */
     /*  *********************************  */
 
-    public US collect(CollectInterface behavior){
+    public List<Object> collect(CollectInterface behavior){
       /**
       * Produces a new array of values by mapping each value in list 
       * through a transformation function (behavior.collectfn). The collectfn is 
@@ -450,9 +442,7 @@ public class US {
       * the iteration, and finally a reference to the entire list.
       */
         // This mutates the object.  Rewinding only restores the original list, not the original values.
-        mutated = true;
-        objs = behavior.collect(objs);
-        return this;
+        return behavior.collect(objs);
     }
 
     public US each(EachInterface behavior){
@@ -551,6 +541,10 @@ public class US {
         return ret;
     }
 
+    public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
+      return (List<Id>) US.stringify(pluck(field));
+    }
+
     public Object max(String field){
         /*
             Is there a way to handle Max w/ the default Object instead of 
@@ -576,33 +570,17 @@ public class US {
     }
 
     public Map<String, Set<SObject>> groupBy(GroupByInterface behavior){
-        return behavior.group(objs);
+        return behavior.groupBy(objs);
     }
 
 
     public Map<String, SObject> indexBy(IndexByInterface behavior){
-        Map<String, SObject> ret = new Map<String, SObject>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.indexByFn(o);
-            ret.put(group_name, o);
-        }
-
-        return ret;
+        return behavior.indexBy(objs);
     }
 
 
     public Map<String, Integer> countBy(CountByInterface behavior){
-        Map<String, Integer> ret = new Map<String, Integer>();
-
-        for(Sobject o: objs){
-            String group_name = behavior.countByFn(o);
-            if (ret.get(group_name) == null)
-                ret.put(group_name, 0);
-            ret.put(group_name, ret.get(group_name) + 1);
-        }
-
-        return ret;
+        return behavior.countBy(objs);
     }
 
     public void shuffle(){
@@ -651,6 +629,12 @@ public class US {
         return objs;
     }
 
+    public SObject first(){
+      if (objs.size() > 0)
+        return objs[0];
+      return null;
+    }
+
     public US rewind(){
         objs = original_objs;
         return this;
@@ -662,4 +646,16 @@ public class US {
         mutated = false;
         i = 0;
     }
+
+    /*  Static functions to deal with returned data; we may want to modify how we handle this in teh future.*/
+    
+    public static List<String> stringify(List<Object> objs){
+        /* How to integrate this? */
+        List<String> ret = new List<String>();
+        for (Object o: objs){
+            ret.add((String) o);
+        }
+        return ret;
+    }
+
 }
