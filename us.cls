@@ -13,6 +13,7 @@ public class US {
     /*  Generic Filters                    */
     /*  *********************************  */
     public class KeepNewest extends ReduceInterfaceAbstract{
+
          /**
          * This class implements a common list manipulation use case;
          * to reduce a list of SObjects to the newest element based on a specific date field.
@@ -37,6 +38,7 @@ public class US {
       } 
     
     } // KeepNewest
+
 
     public class FilterFieldStrings extends US.FilterInterfaceAbstract {
        /**
@@ -433,7 +435,6 @@ public class US {
     /*  *********************************  */
     /*  Functions                          */
     /*  *********************************  */
-
 
     public List<Object> collect(CollectInterface behavior){
       /**
