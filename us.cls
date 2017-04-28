@@ -226,8 +226,11 @@ public class US {
         * @see CountByInterface
         * @see PartitionInterface
         * @see PartitionInterfaceAbstract
+        *
+        * Changelog: Switched from Set<SObject> to List<Object> as 1. we may need an ordered list, 
+        * and 2. we are moving to using Object instead of SObject (as we can still do casting as necessary)
         */
-        Map<String, Set<SObject>> groupBy(List<SObject> objs);
+        Map<String, List<Object>> groupBy(List<Object> objs);
     }
 
     public interface IndexByInterface {
