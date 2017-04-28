@@ -574,7 +574,7 @@ public class US {
         return this;
     }
 
-    public Map<String, Set<SObject>> groupBy(GroupByInterface behavior){
+    public Map<String, List<Object>> groupBy(GroupByInterface behavior){
         return behavior.groupBy(objs);
     }
 
