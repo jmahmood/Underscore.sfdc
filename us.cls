@@ -248,7 +248,7 @@ public class US {
         * @see PartitionInterface
         * @see PartitionInterfaceAbstract
         */
-        Map<String, SObject> indexBy(List<SObject> objs);
+        Map<String, Object> indexBy(List<Object> objs);
     }
 
     public interface CountByInterface {
@@ -296,12 +296,13 @@ public class US {
             return ret;
         }
 
-        public Map<String, SObject> indexBy(List<SObject> objs){
+        public Map<String, Object> indexBy(List<Object> objs){
             Map<String, SObject> ret = new Map<String, SObject>();
 
-            for(Sobject o: objs){
-                String group_name = partitionFn(o);
-                ret.put(group_name, o);
+            for(object o: objs){
+                SObject so = (SObject) o;
+                String group_name = partitionFn(so);
+                ret.put(group_name, so);
             }
             return ret;
         }
@@ -579,7 +580,7 @@ public class US {
     }
 
 
-    public Map<String, SObject> indexBy(IndexByInterface behavior){
+    public Map<String, Object> indexBy(IndexByInterface behavior){
         return behavior.indexBy(objs);
     }
 
