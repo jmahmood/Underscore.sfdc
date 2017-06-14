@@ -346,8 +346,9 @@ public class US {
         * @see PartitionInterface
         */
 
-        public Map<String, List<Object>> groupBy(List<Object> objs){
-            Map<String, List<Object>> ret = new Map<String, List<Object>>();
+        public Map<String, List<Object>> groupBy(Type retType, List<Object> objs){
+            /*  By adding the type value, we are simplifying how we cast objects back. */
+            Map<String, List<Object>> ret = (Map<String, List<Object>>)retType.newInstance();
 
             for(Object o: objs){
                 String group_name = partitionFn((SObject) o);
@@ -358,6 +359,10 @@ public class US {
             return ret;
         }
 
+        public Map<String, List<Object>> groupBy(List<Object> objs){
+            return groupBy(Map<String, List<Object>>.class, objs);
+        }
+        
         public Map<String, Object> indexBy(List<Object> objs){
             Map<String, SObject> ret = new Map<String, SObject>();
 
