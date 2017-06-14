@@ -98,6 +98,66 @@ public class US {
         }
     } 
 
+    public class FilterFieldEqualToValue extends US.FilterInterfaceAbstract {
+        final private Object filter_val;
+        final private String filter_field;
+
+        public FilterFieldEqualToValue(String field, Object val){
+            filter_field = field;
+            filter_val = val;
+        }
+
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return value.get(filter_field) == filter_val;
+        }
+    }
+
+    public class FilterFieldInValueCollection extends US.FilterInterfaceAbstract {
+        final private Set<Object> filter_val;
+        final private String filter_field;
+
+        public FilterFieldInValueCollection(String field, Set<Object> val){
+            filter_field = field;
+            filter_val = val;
+        }
+
+        public override boolean filterfn(List<SObject> memo, SObject value){
+            return filter_val.contains(value.get(filter_field));
+        }
+    }    
+    
+    public class FilterCompareFieldToValue extends US.FilterInterfaceAbstract {
+        final private Object filter_val;
+        final private String filter_field;
+        final private String filter_comparitor;
+
+        public FilterCompareFieldToValue(String field, String comparitor, Object val){
+            filter_field = field;
+            filter_val = val;
+            filter_comparitor = comparitor;
+        }
+
+        public override boolean filterfn(List<SObject> memo, SObject value){
+        Boolean gt = filter_comparitor == '>' || filter_comparitor == '>=';
+        Boolean lt = filter_comparitor == '<' || filter_comparitor == '<=';
+        Boolean eq = filter_comparitor == '==' || filter_comparitor == '<='  || filter_comparitor == '>=';
+
+            return filter_val instanceof Integer && (
+                    (gt && (Integer) value.get(filter_field) > (Integer) filter_val) || (lt && (Integer) value.get(filter_field) < (Integer) filter_val) || (eq && (Integer) value.get(filter_field) == (Integer) filter_val)
+                ) || filter_val instanceof Decimal && (
+                    (gt && (Decimal) value.get(filter_field) >  (Decimal) filter_val) || (lt && (Decimal) value.get(filter_field) <  (Decimal) filter_val) || (eq && (Decimal) value.get(filter_field) == (Decimal) filter_val)
+                ) || filter_val instanceof Date && (
+                    (gt && (Date) value.get(filter_field) > (Date) filter_val) || (lt && (Date) value.get(filter_field) < (Date) filter_val) || (eq && (Date) value.get(filter_field) == (Date) filter_val)
+                ) || filter_val instanceof Datetime && (
+                    (gt && (Datetime) value.get(filter_field) > (Datetime) filter_val) || (lt && (Datetime) value.get(filter_field) < (Datetime) filter_val) || (eq && (Datetime) value.get(filter_field) == (Datetime) filter_val)
+                ) || filter_val instanceof Time && (
+                    (gt && (Time) value.get(filter_field) > (Time) filter_val) || (lt && (Time) value.get(filter_field) < (Time) filter_val) || (eq && (Time) value.get(filter_field) == (Time) filter_val)
+                ) || filter_val instanceof Long && (
+                    (gt && (Long) value.get(filter_field) > (Long) filter_val) || (lt && (Long) value.get(filter_field) < (Long) filter_val) || (eq && (Long) value.get(filter_field) == (Long) filter_val)
+                );
+        }
+    }
+    
     /*  *********************************  */
     /*  Exceptions                         */
     /*  *********************************  */
@@ -242,6 +302,8 @@ public class US {
         *
         * You can override US.PartitionInterfaceAbstract to get the most likely configuration 
         * you want for IndexBy.  (You also get GroupBy and CountBy for free)
+        * 
+        * You can use this also for a Map<String, Map<...>> type.
         *
         * @see GroupByInterface
         * @see CountByInterface
@@ -284,13 +346,13 @@ public class US {
         * @see PartitionInterface
         */
 
-        public Map<String, Set<SObject>> groupBy(List<SObject> objs){
-            Map<String, Set<SObject>> ret = new Map<String, Set<SObject>>();
+        public Map<String, List<Object>> groupBy(List<Object> objs){
+            Map<String, List<Object>> ret = new Map<String, List<Object>>();
 
-            for(Sobject o: objs){
-                String group_name = partitionFn(o);
+            for(Object o: objs){
+                String group_name = partitionFn((SObject) o);
                 if (ret.get(group_name) == null)
-                    ret.put(group_name, new Set<SObject>());
+                    ret.put(group_name, new List<SObject>());
                 ret.get(group_name).add(o);
             }
             return ret;
@@ -299,7 +361,7 @@ public class US {
         public Map<String, Object> indexBy(List<Object> objs){
             Map<String, SObject> ret = new Map<String, SObject>();
 
-            for(object o: objs){
+            for(Object o: objs){
                 SObject so = (SObject) o;
                 String group_name = partitionFn(so);
                 ret.put(group_name, so);
@@ -322,6 +384,7 @@ public class US {
         public abstract String partitionFn(SObject obj); // generates partition name
     }
 
+    
     public abstract class ReduceRightInterfaceAbstract implements ReduceRightInterface{
         // TODO: Should we merge this with ReduceInterfaceAbstract?  Seems to make more sense that way.
 
@@ -510,6 +573,35 @@ public class US {
         return this;
     }
 
+    public US filter(String field, List<Object> val){
+        Set<Object> set_vals = new Set<Object>(val);
+        return filter(field, set_vals);
+    }
+
+    public US filter(String field, Set<Object> val){
+        FilterFieldInValueCollection behavior = new FilterFieldInValueCollection(field, val);
+        return filter(behavior);
+    }
+
+    public US filter(String field, Object val){
+        FilterFieldEqualToValue behavior = new FilterFieldEqualToValue(field, val);
+        return filter(behavior);
+    }
+
+    public class InvalidComparatorException extends Exception {
+    
+    }
+
+    public US filter(String field, String comparitor, Object val){
+        Set<String> VALID_COMPARITORS = new Set<String>{'<', '>', '<=', '>=', '=='};
+      if (!VALID_COMPARITORS.contains(comparitor)){
+        throw new InvalidComparatorException();
+      }
+        FilterCompareFieldToValue behavior = new FilterCompareFieldToValue(field, comparitor, val);
+        return filter(behavior);
+    }
+
+
     public US reject(FilterInterfaceAbstract behavior){
         objs = behavior.reject(objs);
         return this;
@@ -539,14 +631,22 @@ public class US {
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
 
-    public List<Object> pluck(String field){
-        List<Object> ret = new List<Object> ();
+    public List<Object> pluck(Type resListType, String field){
+        List<Object> ret = (List<Object>)resListType.newInstance();
         for(Sobject o: objs){
             ret.add(o.get(field));
         }
         return ret;
     }
 
+    public List<Object> pluck(String field){ /* Needs clarity wrt object vs. sobject */
+        List<Object> ret = new List<Object> (); 
+        for(Sobject o: objs){
+            ret.add(o.get(field));
+        }
+        return ret;
+    }
+    
     public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
       return (List<Id>) US.stringify(pluck(field));
     }
@@ -641,6 +741,7 @@ public class US {
       return null;
     }
 
+    
     public US rewind(){
         objs = original_objs;
         return this;
