@@ -112,6 +112,20 @@ public class US {
         }
     }
 
+    public Class EachSetValue extends US.EachInterfaceAbstract{
+        final private String each_field;
+        final private Object each_val;
+        
+        public EachSetValue(String field, Object val){
+            each_field=field;
+            each_val = val;
+        }
+        
+        public override void eachfn(List<SObject> lst, SObject value, Integer index){
+            value.put(each_field, each_val);
+        }
+    }
+    
     public class FilterFieldInValueCollection extends US.FilterInterfaceAbstract {
         final private Set<Object> filter_val;
         final private String filter_field;
@@ -525,7 +539,13 @@ public class US {
         objs = behavior.each(objs);
         return this;
     }
-
+    
+    public US each(String field, Object val){
+        // This mutates the object.  Rewinding only restores the original list, not the original values.
+        EachSetValue behavior = new EachSetValue(field, val);
+        return each(behavior);
+    }
+    
     public SObject reduce(ReduceInterface behavior){
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
@@ -746,7 +766,10 @@ public class US {
       return null;
     }
 
-    
+    public Integer size(){
+        return objs.size();
+    }
+
     public US rewind(){
         objs = original_objs;
         return this;
