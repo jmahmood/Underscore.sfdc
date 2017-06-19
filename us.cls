@@ -636,6 +636,21 @@ public class US {
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
 
+    // Extract multiple items of the same type
+    public List<Object> pluck(Type resListType, List<String> fields){
+        List<Object> ret = (List<Object>)resListType.newInstance();
+        for(Sobject o: objs){
+            for(String field: fields)
+	            ret.add(o.get(field));
+        }
+        return ret;
+    }
+
+    // Extract multiple items of the same type
+    public List<Object> pluck(List<String> fields){
+        return pluck(List<Object>.type, fields);
+    }
+    
     public List<Object> pluck(Type resListType, String field){
         List<Object> ret = (List<Object>)resListType.newInstance();
         for(Sobject o: objs){
@@ -645,15 +660,11 @@ public class US {
     }
 
     public List<Object> pluck(String field){ /* Needs clarity wrt object vs. sobject */
-        List<Object> ret = new List<Object> (); 
-        for(Sobject o: objs){
-            ret.add(o.get(field));
-        }
-        return ret;
+        return pluck(List<Object>.type, field);
     }
     
     public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
-      return (List<Id>) US.stringify(pluck(field));
+      return (List<Id>) pluck(List<Id>.class, field);
     }
 
     public Object max(String field){
