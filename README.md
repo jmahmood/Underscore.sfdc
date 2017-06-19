@@ -40,6 +40,10 @@ This is particularly useful for functions that run on triggers; load all your da
 
 The above function is based on an actual situation where we could not count on the Master / Detail field's aggregate field to be available when needed.  The vendor's original item has multiple for loops and multiple SOQL queries involved; 
 
+## Collect
+
+AKA the "Map" from Map/Reduce, Use "Collect" if you just want to create a new list that stores the result of a function on a US Obj list; use "Each" if you want to modify the actual object itself.
+
 
 # Background
 As the head of a large Salesforce.com organization, I find that the difficulties that people have with SFDC and its governor limits is related to the Apex language.  It is far too easy to load data in the middle of loops, and far harder to responsibly load data beforehand (to reduce the number of queries).
