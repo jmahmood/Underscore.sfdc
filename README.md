@@ -31,21 +31,18 @@ This is particularly useful for functions that run on triggers; load all your da
 			US all_related_lineitems = new US([SELECT id, Parent__c, CheckboxField__c FROM LineItem__c WHERE Parent__c =: parent_ids]);
 
 			for (ParentObj__c po: parent_objs){
-				po.LineItems__c = all_related_lineitems.rewind().filter(new US.FilterFieldIds('Parent__c', po.Id)).size();
-				po.CheckboxField__c = all_related_lineitems.filter(new FilterTrueCheckboxFieldOnly()).size();
+				po.LineItemCount__c = all_related_lineitems.rewind().filter('Parent__c', po.Id).size();
+				po.CheckboxFieldCount__c = all_related_lineitems.filter('CheckboxField__c', true).size();
 			}
 			update parent_objs;
 		}
 
 
-		public class FilterTrueCheckboxFieldOnly extends US.FilterInterfaceAbstract{
-		    public override boolean filterfn(List<SObject> memo, SObject value){
-		        return ((LineItem__c) value).CheckboxField__c;
-		    }
-		} 
-
-
 The above function is based on an actual situation where we could not count on the Master / Detail field's aggregate field to be available when needed.  The vendor's original item has multiple for loops and multiple SOQL queries involved; 
+
+## Collect
+
+AKA the "Map" from Map/Reduce, Use "Collect" if you just want to create a new list that stores the result of a function on a US Obj list; use "Each" if you want to modify the actual object itself.
 
 
 # Background
