@@ -668,7 +668,7 @@ public class US {
 
     // Extract multiple items of the same type
     public List<Object> pluck(List<String> fields){
-        return pluck(List<Object>.type, fields);
+        return pluck(List<Object>.class, fields);
     }
     
     public List<Object> pluck(Type resListType, String field){
@@ -680,7 +680,7 @@ public class US {
     }
 
     public List<Object> pluck(String field){ /* Needs clarity wrt object vs. sobject */
-        return pluck(List<Object>.type, field);
+        return pluck(List<Object>.class, field);
     }
     
     public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
