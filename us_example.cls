@@ -65,6 +65,6 @@ public with sharing class Custom_Object_TriggerActions {
   public static void calloutApprovedInformation(List<SObject> new_list, Map<Id, SObject> old_map) {
     oldApp = old_map;
     if(US.OL(new_list).filter('Status__c', ValidEndStatus).some(new OldRequestStatusChange()))
-      EXRB_BulkCallWebService_Batch.startBatch(true);
+      BulkCallWebService_Batch.startBatch(true);
   }
 }
