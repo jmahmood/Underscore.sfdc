@@ -48,3 +48,23 @@ public class us_example {
     
 
 }
+
+// You must run the batch job if we transition from StartBatchJobStartStatus to TriggerWebServiceBatchStatus
+// Demos how we can use OL if we don't want to reuse the US object later.
+public with sharing class Custom_Object_TriggerActions {
+  public static Map<Id, SObject> oldApp;
+  final static Set<String> StartBatchJobEndStatus = new Set<String> {'Approved', 'Resubmit'};
+  final static Set<String> StartBatchJobStartStatus = new Set<String> {'Awaiting Financial Approval', 'Circulating'};
+
+  public class OldRequestStatusChange extends US.FilterInterfaceAbstract {
+      public override boolean filterfn(List<SObject> memo, SObject value){
+          return StartBatchJobStartStatus.contains((String) OldApp.get(value.Id).get('Status__c'));
+      }
+  }
+
+  public static void calloutApprovedInformation(List<SObject> new_list, Map<Id, SObject> old_map) {
+    oldApp = old_map;
+    if(US.OL(new_list).filter('Status__c', StartBatchJobEndStatus).some(new OldRequestStatusChange()))
+      EXRB_BulkCallWebService_Batch.startBatch(true);
+  }
+}
