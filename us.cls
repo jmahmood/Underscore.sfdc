@@ -804,4 +804,8 @@ public class US {
         return ret;
     }
 
+    /*  Allows us to do easy one-liner execution of code and filters. */
+    public static US OL(List<SObject> objs){
+        return new US(objs);
+    }
 }
