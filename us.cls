@@ -632,6 +632,30 @@ public class US {
         return this;
     }
 
+    public US reject(String field, List<Object> val){
+        Set<Object> set_vals = new Set<Object>(val);
+        return reject(field, set_vals);
+    }
+
+    public US reject(String field, Set<Object> val){
+        FilterFieldInValueCollection behavior = new FilterFieldInValueCollection(field, val);
+        return reject(behavior);
+    }
+
+    public US reject(String field, Object val){
+        FilterFieldEqualToValue behavior = new FilterFieldEqualToValue(field, val);
+        return reject(behavior);
+    }
+
+    public US reject(String field, String comparitor, Object val){
+        Set<String> VALID_COMPARITORS = new Set<String>{'<', '>', '<=', '>=', '=='};
+      if (!VALID_COMPARITORS.contains(comparitor)){
+        throw new InvalidComparatorException();
+      }
+        FilterCompareFieldToValue behavior = new FilterCompareFieldToValue(field, comparitor, val);
+        return reject(behavior);
+    }
+	
     public Boolean every(FilterInterfaceAbstract behavior){
         return behavior.every(objs);
     }
