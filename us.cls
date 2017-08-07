@@ -73,7 +73,21 @@ public with sharing class  US {
             return (String) value.get(filter_field) == filter_val;
         }
     } 
-  
+
+    public Class EachSetValue extends US.EachInterfaceAbstract{		
+        final private String each_field;		
+        final private Object each_val;		
+        		
+        public EachSetValue(String field, Object val){		
+            each_field=field;		
+            each_val = val;		
+        }		
+        		
+        public override void eachfn(List<SObject> lst, SObject value, Integer index){		
+            value.put(each_field, each_val);		
+        }		
+    }
+	
     public class FilterFieldIds extends US.FilterInterfaceAbstract {
        /**
        * This class implements a common list manipulation use case;
@@ -550,6 +564,12 @@ public with sharing class  US {
         return this;
     }
 
+    public US each(String field, Object val){		
+        // This mutates the object.  Rewinding only restores the original list, not the original values.		
+        EachSetValue behavior = new EachSetValue(field, val);		
+        return each(behavior);		
+    }
+
     public SObject reduce(ReduceInterface behavior){
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
@@ -691,6 +711,21 @@ public with sharing class  US {
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
 
+    // Extract multiple items of the same type
+    public List<Object> pluck(Type resListType, List<String> fields){
+        List<Object> ret = (List<Object>)resListType.newInstance();
+        for(Sobject o: objs){
+            for(String field: fields)
+	            ret.add(o.get(field));
+        }
+        return ret;
+    }
+
+    // Extract multiple items of the same type
+    public List<Object> pluck(List<String> fields){
+        return pluck(List<Object>.class, fields);
+    }
+	
     public List<Object> pluck(Type resListType, String field){
         List<Object> ret = (List<Object>)resListType.newInstance();
         for(Sobject o: objs){
@@ -829,4 +864,7 @@ public with sharing class  US {
         return ret;
     }
 
+    public static US OL(List<SObject> objs){
+        return new US(objs);
+    }	
 }
