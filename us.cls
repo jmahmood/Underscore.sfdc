@@ -743,7 +743,7 @@ public with sharing class  US {
     }
     
     public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
-      return (List<Id>) US.stringify(pluck(field));
+	return (List<Id>) pluck(List<Id>.class, field);		
     }
 
     public Object max(String field){
