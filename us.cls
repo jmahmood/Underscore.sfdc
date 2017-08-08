@@ -112,6 +112,20 @@ public class US {
         }
     }
 
+    public Class EachSetValue extends US.EachInterfaceAbstract{
+        final private String each_field;
+        final private Object each_val;
+        
+        public EachSetValue(String field, Object val){
+            each_field=field;
+            each_val = val;
+        }
+        
+        public override void eachfn(List<SObject> lst, SObject value, Integer index){
+            value.put(each_field, each_val);
+        }
+    }
+    
     public class FilterFieldInValueCollection extends US.FilterInterfaceAbstract {
         final private Set<Object> filter_val;
         final private String filter_field;
@@ -141,6 +155,10 @@ public class US {
         Boolean gt = filter_comparitor == '>' || filter_comparitor == '>=';
         Boolean lt = filter_comparitor == '<' || filter_comparitor == '<=';
         Boolean eq = filter_comparitor == '==' || filter_comparitor == '<='  || filter_comparitor == '>=';
+            if (filter_val instanceof String){
+                system.debug(LoggingLevel.ERROR, 'This doesn\'t work with a String.  Why do you need less than / etc.. for a String?');
+                throw new InvalidComparatorException('This doesn\'t work with a String.  Why do you need less than / etc.. for a String?');
+            }
 
             return filter_val instanceof Integer && (
                     (gt && (Integer) value.get(filter_field) > (Integer) filter_val) || (lt && (Integer) value.get(filter_field) < (Integer) filter_val) || (eq && (Integer) value.get(filter_field) == (Integer) filter_val)
@@ -525,7 +543,13 @@ public class US {
         objs = behavior.each(objs);
         return this;
     }
-
+    
+    public US each(String field, Object val){
+        // This mutates the object.  Rewinding only restores the original list, not the original values.
+        EachSetValue behavior = new EachSetValue(field, val);
+        return each(behavior);
+    }
+    
     public SObject reduce(ReduceInterface behavior){
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
@@ -612,6 +636,30 @@ public class US {
         return this;
     }
 
+    public US reject(String field, List<Object> val){
+        Set<Object> set_vals = new Set<Object>(val);
+        return reject(field, set_vals);
+    }
+
+    public US reject(String field, Set<Object> val){
+        FilterFieldInValueCollection behavior = new FilterFieldInValueCollection(field, val);
+        return reject(behavior);
+    }
+
+    public US reject(String field, Object val){
+        FilterFieldEqualToValue behavior = new FilterFieldEqualToValue(field, val);
+        return reject(behavior);
+    }
+
+    public US reject(String field, String comparitor, Object val){
+        Set<String> VALID_COMPARITORS = new Set<String>{'<', '>', '<=', '>=', '=='};
+      if (!VALID_COMPARITORS.contains(comparitor)){
+        throw new InvalidComparatorException();
+      }
+        FilterCompareFieldToValue behavior = new FilterCompareFieldToValue(field, comparitor, val);
+        return reject(behavior);
+    }
+	
     public Boolean every(FilterInterfaceAbstract behavior){
         return behavior.every(objs);
     }
@@ -636,6 +684,21 @@ public class US {
         throw new UnimplementedUnderscoreException('Invoke is not available on Salesforce');
     }
 
+    // Extract multiple items of the same type
+    public List<Object> pluck(Type resListType, List<String> fields){
+        List<Object> ret = (List<Object>)resListType.newInstance();
+        for(Sobject o: objs){
+            for(String field: fields)
+	            ret.add(o.get(field));
+        }
+        return ret;
+    }
+
+    // Extract multiple items of the same type
+    public List<Object> pluck(List<String> fields){
+        return pluck(List<Object>.class, fields);
+    }
+    
     public List<Object> pluck(Type resListType, String field){
         List<Object> ret = (List<Object>)resListType.newInstance();
         for(Sobject o: objs){
@@ -645,15 +708,11 @@ public class US {
     }
 
     public List<Object> pluck(String field){ /* Needs clarity wrt object vs. sobject */
-        List<Object> ret = new List<Object> (); 
-        for(Sobject o: objs){
-            ret.add(o.get(field));
-        }
-        return ret;
+        return pluck(List<Object>.class, field);
     }
     
     public List<Id> pluckid(String field){ // This happens so often that we can add this as a case.
-      return (List<Id>) US.stringify(pluck(field));
+      return (List<Id>) pluck(List<Id>.class, field);
     }
 
     public Object max(String field){
@@ -739,14 +798,17 @@ public class US {
     public List<SObject> toList(){
         return objs;
     }
-
+    
     public SObject first(){
       if (objs.size() > 0)
         return objs[0];
       return null;
     }
 
-    
+    public Integer size(){
+        return objs.size();
+    }
+
     public US rewind(){
         objs = original_objs;
         return this;
@@ -760,7 +822,6 @@ public class US {
     }
 
     /*  Static functions to deal with returned data; we may want to modify how we handle this in teh future.*/
-    
     public static List<String> stringify(List<Object> objs){
         /* How to integrate this? */
         List<String> ret = new List<String>();
@@ -770,4 +831,8 @@ public class US {
         return ret;
     }
 
+    /*  Allows us to do easy one-liner execution of code and filters. */
+    public static US OL(List<SObject> objs){
+        return new US(objs);
+    }
 }
