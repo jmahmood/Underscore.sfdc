@@ -453,14 +453,17 @@ public class US {
         public abstract Object collectfn(List<SObject> lst, SObject value, Integer index);
 
         public List<Object> collect(Type resListType, List<SObject> objs){
-		Integer i = 0;
-        	List<Object> ret = (List<Object>)resListType.newInstance();
-		for(SObject o: objs){
-			ret.add(collectfn(objs, o, i));
-			i += 1;
-		}
-		return ret;
-	}
+            Integer i = 0;
+            List<Object> ret = (List<Object>)resListType.newInstance();
+            if (objs.size() == 0){
+                return ret;
+            }
+            for(SObject o: objs){
+                ret.add(collectfn(objs, o, i));
+                i += 1;
+            }
+            return ret;
+        }
 	    
         public List<Object> collect(List<SObject> objs){
 	    return collect(Object.class, objs);
@@ -749,18 +752,47 @@ public class US {
         objs.sort();
         return this;
     }
+    
+    public class DefaultPartitionBehavior extends PartitionInterfaceAbstract {
+        public String FieldName;
+        
+        public DefaultPartitionBehavior(String field_name){
+            FieldName = field_name;
+        }
+
+        public override String partitionfn(SObject value){
+            return (String) value.get(FieldName);
+        }
+
+    }
 
     public Map<String, List<Object>> groupBy(GroupByInterface behavior){
         return behavior.groupBy(objs);
     }
 
+    public  Map<String, List<Object>> groupBy(String field){
+        // Use one field to do the grouping.  This only works if the field is a string field.
+        DefaultPartitionBehavior behavior = new DefaultPartitionBehavior(field);
+        return behavior.groupBy(objs);
+    }
 
     public Map<String, Object> indexBy(IndexByInterface behavior){
         return behavior.indexBy(objs);
     }
 
+    public Map<String, Object> indexBy(String field){
+        // Use one field to do the grouping.  This only works if the field is a string field.
+        DefaultPartitionBehavior behavior = new DefaultPartitionBehavior(field);
+        return behavior.indexBy(objs);
+    }
+
 
     public Map<String, Integer> countBy(CountByInterface behavior){
+        return behavior.countBy(objs);
+    }
+
+    public Map<String, Integer> countBy(String field){
+		DefaultPartitionBehavior behavior = new DefaultPartitionBehavior(field);
         return behavior.countBy(objs);
     }
 
