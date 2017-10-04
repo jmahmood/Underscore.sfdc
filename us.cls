@@ -309,6 +309,7 @@ public class US {
         * Changelog: Switched from Set<SObject> to List<Object> as 1. we may need an ordered list, 
         * and 2. we are moving to using Object instead of SObject (as we can still do casting as necessary)
         */
+        Map<String, List<Object>> groupBy(Type t, List<Object> objs);
         Map<String, List<Object>> groupBy(List<Object> objs);
     }
 
@@ -329,6 +330,7 @@ public class US {
         * @see PartitionInterface
         * @see PartitionInterfaceAbstract
         */
+        Map<String, Object> indexBy(Type t, List<Object> objs);
         Map<String, Object> indexBy(List<Object> objs);
     }
 
@@ -382,17 +384,20 @@ public class US {
             return groupBy(Map<String, List<Object>>.class, objs);
         }
         
-        public Map<String, Object> indexBy(List<Object> objs){
-            Map<String, SObject> ret = new Map<String, SObject>();
+        public Map<String, Object> indexBy(Type t, List<Object> objs){
+	    Map<String, Object> ret = (Map<String, Object>)t.newInstance();
 
             for(Object o: objs){
                 SObject so = (SObject) o;
                 String group_name = partitionFn(so);
-                ret.put(group_name, so);
+                ret.put(group_name, o);
             }
             return ret;
         }
 
+    	public Map<String, Object> indexBy(List<Object> objs){
+	    return indexBy(Map<String, SObject>.class, objs);
+        }
 
         public Map<String, Integer> countBy(List<SObject> objs){
             Map<String, Integer> ret = new Map<String, Integer>();
@@ -766,6 +771,11 @@ public class US {
 
     }
 
+    public Map<String, List<Object>> groupBy(Type resMapType, GroupByInterface behavior){
+        return behavior.groupBy(resMapType, objs);
+    }
+
+	
     public Map<String, List<Object>> groupBy(GroupByInterface behavior){
         return behavior.groupBy(objs);
     }
