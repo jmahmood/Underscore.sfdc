@@ -451,14 +451,18 @@ public class US {
  
         public abstract Object collectfn(List<SObject> lst, SObject value, Integer index);
 
+        public List<Object> collect(Type resListType, List<SObject> objs){
+		Integer i = 0;
+        	List<Object> ret = (List<Object>)resListType.newInstance();
+		for(SObject o: objs){
+			ret.add(collectfn(objs, o, i));
+			i += 1;
+		}
+		return ret;
+	}
+	    
         public List<Object> collect(List<SObject> objs){
-            Integer i = 0;
-            List<Object> ret = new List<Object>();
-            for(SObject o: objs){
-                ret.add(collectfn(objs, o, i));
-                i += 1;
-            }
-            return ret;
+	    return collect(Object.class, objs);
         }
     }
 
@@ -533,10 +537,16 @@ public class US {
       * passed three arguments: the value, then the index (or key) of 
       * the iteration, and finally a reference to the entire list.
       */
-        // This mutates the object.  Rewinding only restores the original list, not the original values.
         return behavior.collect(objs);
     }
 
+
+    // Extract multiple items of the same type
+    public List<Object> collect(Type resListType, CollectInterface behavior){
+        return behavior.collect(resListType, objs);
+    }
+	
+	
     public US each(EachInterface behavior){
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
