@@ -218,6 +218,7 @@ public class US {
        * in Apex.
        */
         List<Object> collect(List<SObject> lst);
+        List<Object> collect(Type t, List<SObject> lst);
         Object collectfn(List<SObject> lst, SObject value, Integer index);
     }
 
