@@ -537,10 +537,16 @@ public class US {
       * passed three arguments: the value, then the index (or key) of 
       * the iteration, and finally a reference to the entire list.
       */
-        // This mutates the object.  Rewinding only restores the original list, not the original values.
         return behavior.collect(objs);
     }
 
+
+    // Extract multiple items of the same type
+    public List<Object> collect(Type resListType, CollectInterface behavior){
+        return behavior.collect(resListType, objs);
+    }
+	
+	
     public US each(EachInterface behavior){
         // This mutates the object.  Rewinding only restores the original list, not the original values.
         mutated = true;
