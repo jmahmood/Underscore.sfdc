@@ -851,7 +851,17 @@ public class US {
     public List<SObject> toList(){
         return objs;
     }
-    
+
+    public List<SObject> toList(Type t) {
+	    /* objs is instantiated as List<SObject> which makes it a bit of a pain to convert to the proper object type.
+	    */
+        List<SObject> ret = (List<SObject>)t.newInstance();
+        for (SObject o: objs){
+            ret.add(o);
+        }
+        return ret;
+    }
+	
     public SObject first(){
       if (objs.size() > 0)
         return objs[0];
