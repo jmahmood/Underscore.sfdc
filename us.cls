@@ -12,6 +12,8 @@ public class US {
     /*  *********************************  */
     /*  Generic Filters                    */
     /*  *********************************  */
+
+
     public class KeepNewest extends ReduceInterfaceAbstract{
 
          /**
@@ -835,6 +837,10 @@ public class US {
         return this;
     }
 
+    // public SObject findWhere(Map<String, Object> property_field_value) {
+    //   //
+    // }
+
     public SObject findwhere(SObject properties, List<String> property_fields){
         for (SObject o: objs){
             boolean allowed = true;
@@ -884,7 +890,7 @@ public class US {
         i = 0;
     }
 
-    /*  Static functions to deal with returned data; we may want to modify how we handle this in teh future.*/
+    /*  Static functions to deal with returned data; we may want to modify how we handle this in the future.*/
     public static List<String> stringify(List<Object> objs){
         /* How to integrate this? */
         List<String> ret = new List<String>();
