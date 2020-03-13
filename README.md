@@ -1,7 +1,7 @@
 # Underscore.sfdc
 This is an on-again off-again experiment to see how much of the underscore.js api one could implement using the APEX language on Salesforce.com.  
 
-Thi code isn't stable and will change between versions.  Use at your own risk.
+This code isn't stable and will change between versions.  Use at your own risk.
 
 # Goal
 
